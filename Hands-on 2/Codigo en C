@@ -1,0 +1,169 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+
+typedef enum {
+    q0, q1, q2, q2a, q3, q4, q5, q6, q6a, q7, q8, q9, q10, qf, ERROR
+} State;
+
+bool isValidValue(const char *str, int start) {
+    if (!isalpha(str[start])) return false;
+
+    int pos = start;
+    while (str[pos] != '\0' && str[pos] != '\"') {
+        if (!isalnum(str[pos])) return false;
+        pos++;
+    }
+    return true;
+}
+
+int main() {
+        // valido
+        //char input[1000] = "{\"employees\":[{\"firstName\":\"John\",\"lastName\":\"Doe\"}]}";
+
+        //invalido
+        char input[1000] = "{\"employees\":[{\"firstName\":\"1John\",\"lastName\":\"Doe\"}]}";
+
+    State state = q0;
+    int i = 0;
+    int len = strlen(input);
+
+    printf("Validando: %s\n", input);
+    printf("Longitud: %d caracteres\n\n", len);
+
+    while (i < len && state != ERROR && state != qf) {
+        char c = input[i];
+
+
+        if (isspace(c)) {
+            i++;
+            continue;
+        }
+
+        switch (state) {
+            case q0:
+                if (c == '{') state = q1;
+                else state = ERROR;
+                break;
+
+            case q1:
+                if (strncmp(&input[i], "\"employees\"", 11) == 0) {
+                    state = q2;
+                    i += 10;
+                } else state = ERROR;
+                break;
+
+            case q2:
+                if (c == ':') state = q2a;
+                else state = ERROR;
+                break;
+
+            case q2a:
+                if (c == '[') state = q3;
+                else state = ERROR;
+                break;
+
+            case q3:
+                if (c == '{') state = q4;
+                else state = ERROR;
+                break;
+
+            case q4:
+                if (strncmp(&input[i], "\"firstName\"", 11) == 0) {
+                    state = q5;
+                    i += 10;
+                } else state = ERROR;
+                break;
+
+            case q5:
+                if (c == ':') {
+                    i++;
+                    while (i < len && isspace(input[i])) i++;
+
+                    if (i < len && input[i] == '\"') {
+                        i++;
+
+                        if (i < len && isValidValue(input, i)) {
+
+                            while (i < len && input[i] != '\"') i++;
+
+                            if (i < len && input[i] == '\"') {
+                                state = q6;
+                            } else state = ERROR;
+                        } else state = ERROR;
+                    } else state = ERROR;
+                } else state = ERROR;
+                break;
+
+            case q6:
+                if (c == ',') state = q6a;
+                else state = ERROR;
+                break;
+
+            case q6a:
+                if (strncmp(&input[i], "\"lastName\"", 10) == 0) {
+                    state = q7;
+                    i += 9;
+                } else state = ERROR;
+                break;
+
+            case q7:
+                if (c == ':') {
+                    i++;
+                    while (i < len && isspace(input[i])) i++;
+
+                    if (i < len && input[i] == '\"') {
+                        i++;
+
+                        if (i < len && isValidValue(input, i)) {
+
+                            while (i < len && input[i] != '\"') i++;
+
+                            if (i < len && input[i] == '\"') {
+                                state = q8;
+                            } else state = ERROR;
+                        } else state = ERROR;
+                    } else state = ERROR;
+                } else state = ERROR;
+                break;
+
+            case q8:
+                if (c == '}') state = q9;
+                else state = ERROR;
+                break;
+
+            case q9:
+                if (c == ',') {
+                    state = q3; // Otro objeto
+                } else if (c == ']') {
+                    state = q10; // Fin del array
+                } else state = ERROR;
+                break;
+
+            case q10:
+                if (c == '}') state = qf; // Fin del JSON
+                else state = ERROR;
+                break;
+
+            default:
+                state = ERROR;
+                break;
+        }
+
+        i++;
+    }
+
+    printf("Estado final: %d, indice: %d\n", state, i);
+
+    if (state == qf && i >= len) {
+        printf("JSON VALIDO - Correcto!\n");
+    } else {
+        printf("JSON INVALIDO\n");
+
+        if (state != qf) printf(" - No llego al estado final\n");
+        if (i < len) printf(" - No proceso todo el input (quedaron %d caracteres)\n", len - i);
+    }
+
+    return 0;
+}
